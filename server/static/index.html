@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebResearcher - 深度自主研究智能体</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Marked.js for Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-logo">🔬</div>
+        <div class="brand-text">
+          <h1>WebResearcher</h1>
+          <span class="brand-tag">Deep Research Agent System</span>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="meta-pill" id="model-badge">Model: <span>deepseek-v4-flash</span></div>
+        <div class="meta-pill status-ready" id="server-status"><span class="status-dot"></span> 运行正常</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+
+    <!-- Research Input Section -->
+    <section class="research-input-card">
+      <div class="section-title">
+        <h2>提出研究课题</h2>
+        <p class="section-subtitle">智能体将自主进行多跳网络搜索、长文精读、大纲演化与多源交叉验证</p>
+      </div>
+
+      <!-- Question Input -->
+      <div class="input-group">
+        <textarea 
+          id="question-input" 
+          placeholder="例如：分析2024年诺贝尔物理学奖得主的学术背景以及奖项授予的具体理由与深远影响..."
+          rows="3"
+        >分析2024年诺贝尔物理学奖得主的学术背景以及奖项授予的具体理由与深远影响。</textarea>
+      </div>
+
+      <!-- Paradigm Selector -->
+      <div class="paradigm-section">
+        <label class="field-label">选择研究范式</label>
+        <div class="paradigm-grid" id="paradigm-selector">
+          
+          <div class="paradigm-card active" data-mode="iter">
+            <div class="paradigm-header">
+              <span class="paradigm-name">IterResearch</span>
+              <span class="badge badge-indigo">推荐 / 核心</span>
+            </div>
+            <p class="paradigm-desc">固定精简上下文状态机，单步规划+报告重写+动作，节省 50% Token，彻底杜绝上下文击穿。</p>
+          </div>
+
+          <div class="paradigm-card" data-mode="webweaver">
+            <div class="paradigm-header">
+              <span class="paradigm-name">WebWeaver</span>
+              <span class="badge badge-emerald">学术长文</span>
+            </div>
+            <p class="paradigm-desc">大纲规划者 (Planner) 动态构建大纲 + 撰写者 (Writer) 定向拉取证据，支持 100% 行内学术引用溯源。</p>
+          </div>
+
+          <div class="paradigm-card" data-mode="tts">
+            <div class="paradigm-header">
+              <span class="paradigm-name">Test-Time Scaling</span>
+              <span class="badge badge-amber">多路裁决</span>
+            </div>
+            <p class="paradigm-desc">多路智能体配置温度梯度并发探索，结合首席裁决大模型进行事实交叉比对与矛盾消解，消除幻觉。</p>
+          </div>
+
+          <div class="paradigm-card" data-mode="react">
+            <div class="paradigm-header">
+              <span class="paradigm-name">ReAct</span>
+              <span class="badge badge-slate">经典基准</span>
+            </div>
+            <p class="paradigm-desc">传统思考-行动-观察累加范式，用于学术对比与基准消融实验评测。</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Advanced Settings Accordion -->
+      <div class="advanced-toggle" id="advanced-toggle">
+        <span class="toggle-icon">▸</span> 高级参数设置 (探索轮数、提示偏置)
+      </div>
+      <div class="advanced-panel hidden" id="advanced-panel">
+        <div class="settings-row">
+          <div class="setting-item">
+            <label for="max-rounds">最大探索轮数</label>
+            <input type="number" id="max-rounds" value="5" min="1" max="15">
+          </div>
+          <div class="setting-item">
+            <label for="tts-branches">TTS 并发分支数 (仅 TTS 模式)</label>
+            <input type="number" id="tts-branches" value="3" min="2" max="4">
+          </div>
+        </div>
+        <div class="setting-item full-width">
+          <label for="custom-instruction">自定义关注指令 (Instruction)</label>
+          <input type="text" id="custom-instruction" placeholder="例如：重点关注学术发表论文与数学机理公式推导">
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="form-actions">
+        <button id="start-btn" class="btn btn-primary">
+          <span class="btn-icon">⚡</span> 开始深度研究
+        </button>
+        <button id="cancel-btn" class="btn btn-secondary hidden">
+          取消任务
+        </button>
+      </div>
+    </section>
+
+    <!-- Research Progress & Live Dashboard -->
+    <section class="research-monitor-card hidden" id="monitor-card">
+      <div class="monitor-header">
+        <div class="monitor-title">
+          <h3>实时研究看板</h3>
+          <span class="pulse-badge" id="task-status-badge">准备中...</span>
+          <span class="badge badge-mode-indicator" id="current-mode-indicator">IterResearch</span>
+        </div>
+        
+        <!-- Live Metrics Bar -->
+        <div class="metrics-bar">
+          <div class="metric-pill">耗时: <span id="metric-timer">0.0s</span></div>
+          <div class="metric-pill">轮次: <span id="metric-round">0</span></div>
+          <div class="metric-pill">已消耗 Token: <span id="metric-tokens">0</span></div>
+        </div>
+      </div>
+
+      <!-- Thinking Chain Collapsible Panel (Global) -->
+      <div class="thinking-box" id="thinking-container">
+        <div class="thinking-header" id="thinking-toggle">
+          <div class="thinking-title">
+            <span class="thinking-icon">💭</span>
+            <span>大模型实时思维链 (Thinking Chain)</span>
+          </div>
+          <span class="thinking-expand-icon">收起</span>
+        </div>
+        <div class="thinking-content" id="thinking-text">
+          等待模型生成思维链...
+        </div>
+      </div>
+
+      <!-- ======================================================= -->
+      <!-- 4 大模式专属自适应视图容器 -->
+      <!-- ======================================================= -->
+
+      <!-- 1. IterResearch 专属看板 -->
+      <div class="mode-view" id="view-iter">
+        <div class="iter-grid">
+          <!-- Left: Global Report Draft Live Evolution -->
+          <div class="panel-box iter-report-box">
+            <div class="panel-box-header">
+              <span class="panel-title">📋 全局研报草稿演变流 ($R_i$ Draft Live Monitor)</span>
+              <span class="badge badge-indigo">事实增量沉淀中</span>
+            </div>
+            <div class="panel-box-body markdown-body" id="iter-report-draft">
+              <em>第一轮探索中，暂无草稿内容...</em>
+            </div>
+          </div>
+
+          <!-- Right: Plan & Action Feed -->
+          <div class="panel-box iter-action-box">
+            <div class="panel-box-header">
+              <span class="panel-title">⚡ 规划与探索行动 (Plan & Action)</span>
+            </div>
+            <div class="panel-box-body" id="iter-action-feed">
+              <div class="plan-card" id="iter-current-plan">
+                <strong>💭 当前轮次规划:</strong>
+                <p>等待模型分析线索与规划下一步意图...</p>
+              </div>
+              <div class="action-list" id="iter-tools-list">
+                <!-- Tool executions -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. WebWeaver 双智能体专属看板 -->
+      <div class="mode-view hidden" id="view-webweaver">
+        <!-- Dual-Agent Pipeline Stage Stepper -->
+        <div class="pipeline-stepper" id="webweaver-stepper">
+          <div class="step-node active" id="step-planner">
+            <span class="step-num">1</span>
+            <span class="step-text">大纲规划 (Planner)</span>
+          </div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" id="step-writer">
+            <span class="step-num">2</span>
+            <span class="step-text">深度定向撰写 (Writer)</span>
+          </div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" id="step-citation">
+            <span class="step-num">3</span>
+            <span class="step-text">学术引用后处理 (Citation)</span>
+          </div>
+        </div>
+
+        <div class="webweaver-grid">
+          <!-- Left: Dynamic Outline Tree & Writing Preview -->
+          <div class="panel-box webweaver-outline-box">
+            <div class="panel-box-header">
+              <span class="panel-title">🌳 动态研究大纲演化树 (挂载 [cite:id_N])</span>
+              <span class="badge badge-emerald" id="outline-status-badge">大纲生长中</span>
+            </div>
+            <div class="panel-box-body" id="webweaver-outline-tree">
+              <pre>等待 Planner 输出第一版研究大纲草案...</pre>
+            </div>
+            <div class="panel-box-sub-header">
+              <span class="panel-title">✍️ 章节实时撰写进度 (Writer Stream)</span>
+            </div>
+            <div class="panel-box-body markdown-body" id="webweaver-writer-preview">
+              <em>等待 Planner 构建完毕后交由 Writer 撰写...</em>
+            </div>
+          </div>
+
+          <!-- Right: MemoryBank Evidence Cards -->
+          <div class="panel-box webweaver-memory-box">
+            <div class="panel-box-header">
+              <span class="panel-title">📚 MemoryBank 实时事实证据库</span>
+              <span class="badge badge-indigo" id="memory-bank-count">0 条证据</span>
+            </div>
+            <div class="panel-box-body memory-cards-stream" id="webweaver-memory-list">
+              <div class="empty-hint">等待智能体收集互联网证据并分配全局唯一 ID...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Test-Time Scaling (TTS) 专属看板 -->
+      <div class="mode-view hidden" id="view-tts">
+        <div class="tts-container">
+          <!-- Parallel Branch Cards Grid -->
+          <div class="panel-box-header" style="margin-bottom: 0.5rem;">
+            <span class="panel-title">🔀 多路多样性并行探索矩阵 (Parallel Diverse Exploration)</span>
+          </div>
+          <div class="tts-branches-grid" id="tts-branches-grid">
+            <!-- Dynamically injected Branch 1, Branch 2, Branch 3 cards -->
+          </div>
+
+          <!-- Master Synthesizer Status -->
+          <div class="panel-box tts-synthesizer-box" id="tts-synthesizer-box">
+            <div class="panel-box-header">
+              <span class="panel-title">⚖️ 首席裁决大模型 (Chief Synthesizer) 仲裁中枢</span>
+              <span class="badge badge-amber" id="synthesizer-badge">等待各路探索汇总</span>
+            </div>
+            <div class="panel-box-body" id="tts-synthesizer-content">
+              <p class="synthesizer-status-text">各路探索分支正在并发展开独立调研。调研结束后，首席裁决大模型将在此执行多源交叉核对、消除单点矛盾与幻觉，并生成终极裁决研报。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. ReAct 经典线性看板 -->
+      <div class="mode-view hidden" id="view-react">
+        <div class="panel-box">
+          <div class="panel-box-header">
+            <span class="panel-title">📜 经典线性步骤时间轴 (ReAct Linear Execution)</span>
+          </div>
+          <div class="panel-box-body react-timeline" id="react-timeline-feed">
+            <!-- Linear Thought -> Action -> Obs -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Final Report Display Card -->
+    <section class="report-card hidden" id="report-card">
+      <div class="report-header">
+        <div class="report-title-group">
+          <h2>📄 深度研究成果报告</h2>
+          <span class="report-meta" id="report-meta-info">生成完成</span>
+        </div>
+        <div class="report-actions">
+          <button class="btn btn-sm btn-outline" id="copy-report-btn">
+            📋 复制 Markdown
+          </button>
+          <button class="btn btn-sm btn-outline" id="download-report-btn">
+            💾 导出文件
+          </button>
+        </div>
+      </div>
+
+      <!-- Rendered Markdown Body -->
+      <article class="markdown-body" id="report-markdown-body">
+        <!-- Rendered HTML will appear here -->
+      </article>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>WebResearcher v1.0.0 · 现代化自主研究智能体系统 · 支持 IterResearch / WebWeaver / TTS / ReAct 四大专属看板</p>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
